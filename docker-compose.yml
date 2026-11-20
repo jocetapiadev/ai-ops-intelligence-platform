@@ -1,0 +1,35 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: ai_ops_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: aiops_user
+      POSTGRES_PASSWORD: aiops_password
+      POSTGRES_DB: aiops_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aiops_user -d aiops_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    container_name: ai_ops_api
+    restart: unless-stopped
+    environment:
+      APP_ENV: development
+      DATABASE_URL: postgresql+psycopg2://aiops_user:aiops_password@db:5432/aiops_db
+      EMBEDDING_DIM: 64
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
